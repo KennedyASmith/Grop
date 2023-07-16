@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#OPTIONS
+TWOCOL="false"
+
+#
+# Parse commandline arguments
+#
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -show)
+        TWOCOL="true"
+        shift
+        ;;
+    *)                     # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        shift              # past argument
+        ;;
+    esac
+done
+
+# restore positional parameters
+set -- "${POSITIONAL[@]}"
+
+#
+# Program Start
+#
+if [[ $# -ne 2 ]]; then
+    echo "Usage: $0 [-show] firstfile secondfile"
+    exit 1
+fi
+
+for arg in "$@"; do
+    if ! [ -f $arg ]; then
+        echo "$0:" "${arg}"": No such file"
+        exit 1
+    fi
+done
+
+# Sort files
+sort $1 -o $1
+sort $2 -o $2
+
+# Show diff if requested
+# -y               makes diff two columns
+# -W $(tput cols)  sets width to size of terminal
+#  B               ignores blank space
+if [ "$TWOCOL" = "true" ]; then
+    diff -B -y -W $(tput cols) $1 $2
+fi
+
+# Produce a summary
+
+# Lines in either file
+count1=$(wc -l <$1)
+count2=$(wc -l <$2)
+
+# Number of lines in both file 1 and 2
+numMatches=$(comm $1 $2 -12 | wc -l)
+
+# Difference of longest file and the number of matches
+numDifferent=$(($count1 > $count2 ? $count1 : $count2 - $numMatches))
+
+echo -e "\nSummary"
+echo -e "\tLength of ${1}:" "$count1"
+echo -e "\tLength of ${2}:" "$count2"
+echo -e "\tMatching lines:" "$numMatches"
+echo -e "\tDiffering lines:" "$numDifferent"
